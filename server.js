@@ -163,6 +163,35 @@ app.post('/api/report', function(req, res, next) {
   });
 });
 /**
+ * GET /api/characters/top
+ * Return 100 highest ranked characters. Filter by gender, race and bloodline.
+ */
+app.get('/api/characters/top', function(req, res, next) {
+  var params = req.query;
+  var conditions = {};
+
+  _.each(params, function(value, key) {
+    conditions[key] = new RegExp('^' + value + '$', 'i');
+  });
+
+  Character
+    .find(conditions)
+    .sort('-wins') // Sort in descending order (highest wins on top)
+    .limit(100)
+    .exec(function(err, characters) {
+      if (err) return next(err);
+
+      // Sort by winning percentage
+      characters.sort(function(a, b) {
+        if (a.wins / (a.wins + a.losses) < b.wins / (b.wins + b.losses)) { return 1; }
+        if (a.wins / (a.wins + a.losses) > b.wins / (b.wins + b.losses)) { return -1; }
+        return 0;
+      });
+
+      res.send(characters);
+    });
+});
+/**
  * GET /api/characters/:id
  * Returns detailed character information.
  */
@@ -195,35 +224,7 @@ app.get('/api/characters/shame', function(req, res, next) {
     });
 });
 
-/**
- * GET /api/characters/top
- * Return 100 highest ranked characters. Filter by gender, race and bloodline.
- */
-app.get('/api/characters/top', function(req, res, next) {
-  var params = req.query;
-  var conditions = {};
 
-  _.each(params, function(value, key) {
-    conditions[key] = new RegExp('^' + value + '$', 'i');
-  });
-
-  Character
-    .find(conditions)
-    .sort('-wins') // Sort in descending order (highest wins on top)
-    .limit(100)
-    .exec(function(err, characters) {
-      if (err) return next(err);
-
-      // Sort by winning percentage
-      characters.sort(function(a, b) {
-        if (a.wins / (a.wins + a.losses) < b.wins / (b.wins + b.losses)) { return 1; }
-        if (a.wins / (a.wins + a.losses) > b.wins / (b.wins + b.losses)) { return -1; }
-        return 0;
-      });
-
-      res.send(characters);
-    });
-});
 
 /**
  * GET /api/characters/search
@@ -416,7 +417,8 @@ app.post('/api/characters', function(req, res, next) {
             });
 
             character.save(function(err) {
-              if (err) return next(err);
+              if (err) 
+                 return next(err);
               res.send({ message: characterName + ' has been added successfully!' });
             });
           } catch (e) {
